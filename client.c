@@ -1,14 +1,3 @@
-/* 
- * http://www.ibm.com/support/knowledgecenter/ssw_aix_71/com.ibm.aix.rdma/client_active_example.htm?lang=zh-tw
- * 建置：
- * cc -o client client.c -lrdmacm -libverbs
- * 
- * 用法：
- * client <servername> <val1> <val2>
- *
- * 連接至伺服器，透過「RDMA 寫入」傳送 val1 並透過「RDMA 傳送」傳送 val2，
- * 然後從伺服器接收回 val1+val2。
- */ 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -55,11 +44,11 @@ int main(int argc, char   *argv[ ])
    		.ai_family    = AF_INET,
    		.ai_socktype  = SOCK_STREAM
    	 };
-	int								n; 
-	uint32_t						*buf; 
-	int								err;
+	int n; 
+	uint32_t *buf1;
+        uint32_t *buf2;	
+	int err;
 
-      /* 設定 RDMA CM 結構 */
 	cm_channel = rdma_create_event_channel(); 
 	if (!cm_channel)  
 		return 1; 
@@ -68,11 +57,10 @@ int main(int argc, char   *argv[ ])
 	if (err)  
 		return err;
 
-	n = getaddrinfo(argv[1], "20079", &hints, &res);
+	n = getaddrinfo(argv[1], "9998", &hints, &res);
 	if (n < 0)  
 		return 1;
 
-	/* 解析伺服器位址及路徑 */
 
 	for (t = res; t; t = t->ai_next) {
 		err = rdma_resolve_addr(cm_id, NULL, t->ai_addr, RESOLVE_TIMEOUT_MS);
@@ -104,7 +92,6 @@ int main(int argc, char   *argv[ ])
 
 	rdma_ack_cm_event(event);
 
-	/* 建立動詞物件，因為我們知道要使用哪一個裝置 */
 
 	pd = ibv_alloc_pd(cm_id->verbs); 
 	if (!pd) 
@@ -121,11 +108,11 @@ int main(int argc, char   *argv[ ])
 	if (ibv_req_notify_cq(cq, 0))
 		return 1;
 
-	buf = calloc(2, sizeof (uint32_t)); 
+	buf1 = calloc(1024, sizeof (uint32_t)); 
 	if (!buf) 
 		return 1;
 
-	mr = ibv_reg_mr(pd, buf,2 * sizeof(uint32_t), IBV_ACCESS_LOCAL_WRITE); 
+	mr = ibv_reg_mr(pd, buf1,1024 * sizeof(uint32_t), IBV_ACCESS_LOCAL_WRITE); 
 	if (!mr) 
 		return 1;
 
@@ -145,7 +132,6 @@ int main(int argc, char   *argv[ ])
 	conn_param.initiator_depth = 1;
 	conn_param.retry_count     = 7;
 
-	/* 連接至伺服器 */
 
 	err = rdma_connect(cm_id, &conn_param);
 	if (err)
@@ -161,10 +147,10 @@ int main(int argc, char   *argv[ ])
 	memcpy(&server_pdata, event->param.conn.private_data, sizeof server_pdata);
 	rdma_ack_cm_event(event);
 
-	/* Prepost 接收 */
+	// Prepost
 
-	sge.addr = (uintptr_t) buf; 
-	sge.length = sizeof (uint32_t);
+	sge.addr = (uintptr_t) buf1; 
+	sge.length = (1024*sizeof (uint32_t));
 	sge.lkey = mr->lkey;
 
 	recv_wr.wr_id =     0;                
@@ -174,15 +160,12 @@ int main(int argc, char   *argv[ ])
 	if (ibv_post_recv(cm_id->qp, &recv_wr, &bad_recv_wr))
 					return 1;
 
-	/* 寫入/傳送要新增的兩個整數 */
+	for(int i=0; i<1024; i++)
+	{
+		buf[i] = 1;
+	}
 
-	buf[0] = strtoul(argv[2], NULL, 0);
-	buf[1] = strtoul(argv[3], NULL, 0);
-	printf("%d + %d = ", buf[0], buf[1]);
-	buf[0] = htonl(buf[0]);
-	buf[1] = htonl(buf[1]);
-
-	sge.addr 					  = (uintptr_t) buf; 
+	sge.addr 		      = (uintptr_t) buf; 
 	sge.length                    = sizeof (uint32_t);
 	sge.lkey                      = mr->lkey;
 
@@ -208,8 +191,6 @@ int main(int argc, char   *argv[ ])
 	if (ibv_post_send(cm_id->qp, &send_wr,&bad_send_wr))
 		return 1;
 
-	/* 等待接收完成 */
-
 	while (1) {
 		if (ibv_get_cq_event(comp_chan,&evt_cq, &cq_context))
 			return 1;
@@ -224,7 +205,7 @@ int main(int argc, char   *argv[ ])
 			return 1;
 
 		if (wc.wr_id == 0) {
-			printf("%d\n", ntohl(buf[0]));
+			printf(" ans = %d\n", buf[1022]);
 			return 0;
 		}
    }
