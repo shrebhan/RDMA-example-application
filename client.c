@@ -30,7 +30,9 @@ int main(int argc, char   *argv[ ])
    	struct ibv_comp_channel			*comp_chan; 
    	struct ibv_cq					*cq; 
    	struct ibv_cq					*evt_cq; 
-   	struct ibv_mr					*mr; 
+   	struct ibv_mr					*mr1;
+	struct ibv_mr					*mr2;
+	struct ibv_mr					*mr3;
    	struct ibv_qp_init_attr			qp_attr = { }; 
    	struct ibv_sge					sge; 
    	struct ibv_send_wr				send_wr = { }; 
@@ -46,7 +48,8 @@ int main(int argc, char   *argv[ ])
    	 };
 	int n; 
 	uint32_t *buf1;
-        uint32_t *buf2;	
+        uint32_t *buf2;
+	uint32_t *buf3;
 	int err;
 
 	cm_channel = rdma_create_event_channel(); 
@@ -111,9 +114,24 @@ int main(int argc, char   *argv[ ])
 	buf1 = calloc(1024, sizeof (uint32_t)); 
 	if (!buf) 
 		return 1;
+	
+	buf2 = calloc(1024, sizeof (uint32_t)); 
+	if (!buf) 
+		return 1;
+	
+	buf3 = calloc(1024, sizeof (uint32_t)); 
+	if (!buf) 
+		return 1;
+	
 
-	mr = ibv_reg_mr(pd, buf1,1024 * sizeof(uint32_t), IBV_ACCESS_LOCAL_WRITE); 
-	if (!mr) 
+	mr1 = ibv_reg_mr(pd, buf1, 1024 * sizeof(uint32_t), IBV_ACCESS_REMOTE_READ); 
+	if (!mr1) 
+		return 1;
+	mr2 = ibv_reg_mr(pd, buf2, 1024 * sizeof(uint32_t), IBV_ACCESS_REMOTE_READ); 
+	if (!mr2) 
+		return 1;
+	mr3 = ibv_reg_mr(pd, buf3, 1024 * sizeof(uint32_t), IBV_ACCESS_REMOTE_READ); 
+	if (!mr3) 
 		return 1;
 
 	qp_attr.cap.max_send_wr = 2; 
@@ -149,9 +167,9 @@ int main(int argc, char   *argv[ ])
 
 	// Prepost
 
-	sge.addr = (uintptr_t) buf1; 
+	sge.addr = (uintptr_t) buf3; 
 	sge.length = (1024*sizeof (uint32_t));
-	sge.lkey = mr->lkey;
+	sge.lkey = mr3->lkey;
 
 	recv_wr.wr_id =     0;                
 	recv_wr.sg_list =   &sge;
@@ -162,15 +180,16 @@ int main(int argc, char   *argv[ ])
 
 	for(int i=0; i<1024; i++)
 	{
-		buf[i] = 1;
+		buf1[i] = 1;
+		buf2[i] = 2;
 	}
 
-	sge.addr 		      = (uintptr_t) buf; 
-	sge.length                    = sizeof (uint32_t);
-	sge.lkey                      = mr->lkey;
+	sge.addr 		      = (uintptr_t) buf1; 
+	sge.length                    = (1024 * sizeof (uint32_t));
+	sge.lkey                      = mr1->lkey;
 
 	send_wr.wr_id                 = 1;
-	send_wr.opcode                = IBV_WR_RDMA_WRITE;
+	send_wr.opcode                = IBV_WR_SEND;
 	send_wr.sg_list               = &sge;
 	send_wr.num_sge               = 1;
 	send_wr.wr.rdma.rkey          = ntohl(server_pdata.buf_rkey);
@@ -179,11 +198,11 @@ int main(int argc, char   *argv[ ])
 	if (ibv_post_send(cm_id->qp, &send_wr, &bad_send_wr))
 		return 1;
 
-	sge.addr                      = (uintptr_t) buf + sizeof (uint32_t);
-	sge.length                    = sizeof (uint32_t);
-	sge.lkey                      = mr->lkey;
+	sge.addr                      = (uintptr_t) buf2;
+	sge.length                    = (1024 * sizeof (uint32_t));
+	sge.lkey                      = mr2->lkey;
 	send_wr.wr_id                 = 2;
-	send_wr.opcode                = IBV_WR_SEND;
+	send_wr.opcode                = IBV_WR_RDMA_WRITE;
 	send_wr.send_flags            = IBV_SEND_SIGNALED;
 	send_wr.sg_list               =&sge;
 	send_wr.num_sge               = 1;
@@ -205,7 +224,7 @@ int main(int argc, char   *argv[ ])
 			return 1;
 
 		if (wc.wr_id == 0) {
-			printf(" ans = %d\n", buf[1022]);
+			printf(" ans = %d\n", buf3[1022]);
 			return 0;
 		}
    }
