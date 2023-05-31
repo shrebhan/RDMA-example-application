@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <arpa/inet.h>
-
+#include <stdio.h>
 #include <infiniband/arch.h>
 #include <rdma/rdma_cma.h> 
 
@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
         return err;
 
     sin.sin_family = AF_INET; 
-    sin.sin_port = htons(20079);
+    sin.sin_port = htons(9998);
     sin.sin_addr.s_addr = INADDR_ANY;
 
     
@@ -109,11 +109,11 @@ int main(int argc, char *argv[])
     if (ibv_req_notify_cq(cq, 0))
         return 1;
 
-    buf = calloc(2, sizeof (uint32_t));
+    buf = calloc(1024, sizeof (uint32_t));
     if (!buf) 
         return 1;
 
-   mr = ibv_reg_mr(pd, buf, 2 * sizeof (uint32_t), 
+   mr = ibv_reg_mr(pd, buf, 1024 * sizeof (uint32_t), 
         IBV_ACCESS_LOCAL_WRITE | 
         IBV_ACCESS_REMOTE_READ | 
         IBV_ACCESS_REMOTE_WRITE); 
@@ -181,9 +181,15 @@ int main(int argc, char *argv[])
     if (wc.status != IBV_WC_SUCCESS) //spark error
         return 1;
 
+    printf(" ans = %d\n", buf[1022]);
+
     /* Add two integers and send reply back */
 
-    buf[0] = htonl(ntohl(buf[0]) + ntohl(buf[1]));
+    //buf[0] = htonl(ntohl(buf[0]) + ntohl(buf[1]));
+     for(int i=0; i<1024; i++)
+     {
+                buf[i] = 9;
+     }
 
     sge.addr = (uintptr_t) buf; 
     sge.length = sizeof (uint32_t); 
