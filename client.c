@@ -112,25 +112,28 @@ int main(int argc, char   *argv[ ])
 		return 1;
 
 	buf1 = calloc(1024, sizeof (uint32_t)); 
-	if (!buf) 
+	if (!buf1) 
 		return 1;
 	
 	buf2 = calloc(1024, sizeof (uint32_t)); 
-	if (!buf) 
+	if (!buf2) 
 		return 1;
 	
 	buf3 = calloc(1024, sizeof (uint32_t)); 
-	if (!buf) 
+	if (!buf3) 
 		return 1;
 	
 
-	mr1 = ibv_reg_mr(pd, buf1, 1024 * sizeof(uint32_t), IBV_ACCESS_REMOTE_READ); 
+	mr1 = ibv_reg_mr(pd, buf1, 1024 * sizeof(uint32_t), IBV_ACCESS_REMOTE_READ | IBV_ACCESS_LOCAL_READ); 
 	if (!mr1) 
 		return 1;
-	mr2 = ibv_reg_mr(pd, buf2, 1024 * sizeof(uint32_t), IBV_ACCESS_REMOTE_READ); 
+	mr2 = ibv_reg_mr(pd, buf2, 1024 * sizeof(uint32_t), IBV_ACCESS_REMOTE_READ | IBV_ACCESS_LOCAL_READ); 
 	if (!mr2) 
 		return 1;
-	mr3 = ibv_reg_mr(pd, buf3, 1024 * sizeof(uint32_t), IBV_ACCESS_REMOTE_READ); 
+	mr3 = ibv_reg_mr(pd, buf3, 1024 * sizeof(uint32_t), 
+        IBV_ACCESS_LOCAL_WRITE | 
+        IBV_ACCESS_REMOTE_READ | 
+        IBV_ACCESS_REMOTE_WRITE); 
 	if (!mr3) 
 		return 1;
 
