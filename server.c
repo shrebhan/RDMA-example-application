@@ -54,7 +54,9 @@ int main(int argc, char *argv[])
 
     struct sockaddr_in      sin;
 
-    uint32_t                *buf;
+    uint32_t                *buf1;
+    uint32_t                *buf2;
+    uint32_t                *buf3;
     
     int                     err;
 
@@ -124,18 +126,17 @@ int main(int argc, char *argv[])
    mr1 = ibv_reg_mr(pd, buf1, 1024 * sizeof (uint32_t), 
         IBV_ACCESS_LOCAL_WRITE |  
         IBV_ACCESS_REMOTE_WRITE); 
-    if (!mr) 
+    if (!mr1) 
         return 1;
     mr2 = ibv_reg_mr(pd, buf2, 1024 * sizeof (uint32_t), 
         IBV_ACCESS_LOCAL_WRITE | 
         IBV_ACCESS_REMOTE_WRITE); 
-    if (!mr) 
+    if (!mr2) 
         return 1;
     
     mr3 = ibv_reg_mr(pd, buf3, 1024 * sizeof (uint32_t), 
-        IBV_ACCESS_REMOTE_READ | 
-        IBV_ACCESS_LOCAL_READ); 
-    if (!mr) 
+        IBV_ACCESS_REMOTE_READ); 
+    if (!mr3) 
         return 1;
     
     qp_attr.cap.max_send_wr = 1;
