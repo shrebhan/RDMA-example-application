@@ -56,7 +56,8 @@ int main(int argc, char   *argv[ ])
    		.ai_socktype  = SOCK_STREAM
    	 };
 	int								n; 
-	uint32_t						*buf; 
+	uint32_t						*buf;
+	uint32_t						*buf_res; 
 	int								err;
 
       /* 設定 RDMA CM 結構 */
@@ -114,19 +115,27 @@ int main(int argc, char   *argv[ ])
 	if (!comp_chan) 
 		return 1;
 
-	cq = ibv_create_cq(cm_id->verbs, 2,NULL, comp_chan, 0); 
+	cq = ibv_create_cq(cm_id->verbs, 2, NULL, comp_chan, 0); 
 	if (!cq) 
 		return 1;
 
 	if (ibv_req_notify_cq(cq, 0))
 		return 1;
 
-	buf = calloc(2, sizeof (uint32_t)); 
+	buf = calloc(1024, sizeof (uint32_t)); 
 	if (!buf) 
 		return 1;
 
-	mr = ibv_reg_mr(pd, buf,2 * sizeof(uint32_t), IBV_ACCESS_LOCAL_WRITE); 
+	mr = ibv_reg_mr(pd, buf, 1024 * sizeof(uint32_t), IBV_ACCESS_LOCAL_WRITE); 
 	if (!mr) 
+		return 1;
+	
+	buf_res = calloc(1024, sizeof (uint32_t)); 
+	if (!buf) 
+		return 1;
+
+	mr_r = ibv_reg_mr(pd, buf_res, 1024 * sizeof(uint32_t), IBV_ACCESS_LOCAL_WRITE); 
+	if (!mr_r) 
 		return 1;
 
 	qp_attr.cap.max_send_wr = 2; 
@@ -164,7 +173,7 @@ int main(int argc, char   *argv[ ])
 	/* Prepost 接收 */
 
 	sge.addr = (uintptr_t) buf; 
-	sge.length = sizeof (uint32_t);
+	sge.length = 1024 * sizeof (uint32_t);
 	sge.lkey = mr->lkey;
 
 	recv_wr.wr_id =     0;                
@@ -176,15 +185,15 @@ int main(int argc, char   *argv[ ])
 
 	/* 寫入/傳送要新增的兩個整數 */
 
-	buf[0] = strtoul(argv[2], NULL, 0);
-	buf[1] = strtoul(argv[3], NULL, 0);
-	printf("%d + %d = ", buf[0], buf[1]);
-	buf[0] = htonl(buf[0]);
-	buf[1] = htonl(buf[1]);
+// 	buf[0] = strtoul(argv[2], NULL, 0);
+// 	buf[1] = strtoul(argv[3], NULL, 0);
+ 	printf("%d = ", buf[1023]);
+// 	buf[0] = htonl(buf[0]);
+// 	buf[1] = htonl(buf[1]);
 
-	sge.addr 					  = (uintptr_t) buf; 
-	sge.length                    = sizeof (uint32_t);
-	sge.lkey                      = mr->lkey;
+	sge.addr 		      = (uintptr_t) buf_res; 
+	sge.length                    = 1024 * sizeof (uint32_t);
+	sge.lkey                      = mr_r->lkey;
 
 	send_wr.wr_id                 = 1;
 	send_wr.opcode                = IBV_WR_RDMA_WRITE;
@@ -196,17 +205,17 @@ int main(int argc, char   *argv[ ])
 	if (ibv_post_send(cm_id->qp, &send_wr, &bad_send_wr))
 		return 1;
 
-	sge.addr                      = (uintptr_t) buf + sizeof (uint32_t);
-	sge.length                    = sizeof (uint32_t);
-	sge.lkey                      = mr->lkey;
-	send_wr.wr_id                 = 2;
-	send_wr.opcode                = IBV_WR_SEND;
-	send_wr.send_flags            = IBV_SEND_SIGNALED;
-	send_wr.sg_list               =&sge;
-	send_wr.num_sge               = 1;
+// 	sge.addr                      = (uintptr_t) buf + sizeof (uint32_t);
+// 	sge.length                    = sizeof (uint32_t);
+// 	sge.lkey                      = mr->lkey;
+// 	send_wr.wr_id                 = 2;
+// 	send_wr.opcode                = IBV_WR_SEND;
+// 	send_wr.send_flags            = IBV_SEND_SIGNALED;
+// 	send_wr.sg_list               =&sge;
+// 	send_wr.num_sge               = 1;
 
-	if (ibv_post_send(cm_id->qp, &send_wr,&bad_send_wr))
-		return 1;
+// 	if (ibv_post_send(cm_id->qp, &send_wr,&bad_send_wr))
+// 		return 1;
 
 	/* 等待接收完成 */
 
