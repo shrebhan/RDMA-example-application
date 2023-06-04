@@ -53,6 +53,7 @@ int main(int argc, char *argv[])
     struct sockaddr_in      sin;
 
     uint32_t                *buf;
+    uint32_t                *buf_s;
     
     int                     err;
 
@@ -109,8 +110,12 @@ int main(int argc, char *argv[])
     if (ibv_req_notify_cq(cq, 0))
         return 1;
 
-    buf = calloc(2, sizeof (uint32_t));
+    buf = calloc(1024, sizeof (uint32_t));
     if (!buf) 
+        return 1;
+    
+    buf_s = calloc(1024, sizeof (uint32_t));
+    if (!buf_s) 
         return 1;
 
    mr = ibv_reg_mr(pd, buf, 2 * sizeof (uint32_t), 
