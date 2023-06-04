@@ -118,11 +118,18 @@ int main(int argc, char *argv[])
     if (!buf_s) 
         return 1;
 
-   mr = ibv_reg_mr(pd, buf, 2 * sizeof (uint32_t), 
+   mr = ibv_reg_mr(pd, buf, 1024 * sizeof (uint32_t), 
         IBV_ACCESS_LOCAL_WRITE | 
         IBV_ACCESS_REMOTE_READ | 
         IBV_ACCESS_REMOTE_WRITE); 
     if (!mr) 
+        return 1;
+
+    mr_s = ibv_reg_mr(pd, buf_s, 1024 * sizeof (uint32_t), 
+        IBV_ACCESS_LOCAL_WRITE | 
+        IBV_ACCESS_REMOTE_READ | 
+        IBV_ACCESS_REMOTE_WRITE); 
+    if (!mr_s) 
         return 1;
     
     qp_attr.cap.max_send_wr = 1;
@@ -140,8 +147,8 @@ int main(int argc, char *argv[])
         return err;
 
     /* Post receive before accepting connection */
-    sge.addr = (uintptr_t) buf + sizeof (uint32_t); 
-    sge.length = sizeof (uint32_t); 
+    sge.addr = (uintptr_t) buf; 
+    sge.length = 1024 * sizeof (uint32_t); 
     sge.lkey = mr->lkey;
 
     recv_wr.sg_list = &sge; 
@@ -188,11 +195,12 @@ int main(int argc, char *argv[])
 
     /* Add two integers and send reply back */
 
-    buf[0] = htonl(ntohl(buf[0]) + ntohl(buf[1]));
+    //buf[0] = htonl(ntohl(buf[0]) + ntohl(buf[1]));
+    printf("%d = ", buf[1023]);
 
-    sge.addr = (uintptr_t) buf; 
-    sge.length = sizeof (uint32_t); 
-    sge.lkey = mr->lkey;
+    sge.addr = (uintptr_t) buf_s; 
+    sge.length = 1024 * sizeof (uint32_t); 
+    sge.lkey = mr_s->lkey;
     
     send_wr.opcode = IBV_WR_SEND;
     send_wr.send_flags = IBV_SEND_SIGNALED;

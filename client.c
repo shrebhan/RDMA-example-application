@@ -131,10 +131,13 @@ int main(int argc, char   *argv[ ])
 		return 1;
 	
 	buf_res = calloc(1024, sizeof (uint32_t)); 
-	if (!buf) 
+	if (!buf_res) 
 		return 1;
 
-	mr_r = ibv_reg_mr(pd, buf_res, 1024 * sizeof(uint32_t), IBV_ACCESS_LOCAL_WRITE); 
+	mr_r = ibv_reg_mr(pd, buf_res, 1024 * sizeof(uint32_t),  
+        IBV_ACCESS_LOCAL_WRITE | 
+        IBV_ACCESS_REMOTE_READ | 
+        IBV_ACCESS_REMOTE_WRITE); 
 	if (!mr_r) 
 		return 1;
 
