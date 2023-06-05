@@ -40,7 +40,8 @@ int main(int argc, char *argv[])
     struct ibv_comp_channel *comp_chan; 
     struct ibv_cq           *cq;  
     struct ibv_cq           *evt_cq;
-    struct ibv_mr           *mr; 
+    struct ibv_mr           *mr;
+    struct ibv_mr           *mr_s; 
     struct ibv_qp_init_attr qp_attr = { };
     struct ibv_sge          sge; 
     struct ibv_send_wr      send_wr = { };
@@ -68,7 +69,7 @@ int main(int argc, char *argv[])
         return err;
 
     sin.sin_family = AF_INET; 
-    sin.sin_port = htons(20079);
+    sin.sin_port = htons(9888);
     sin.sin_addr.s_addr = INADDR_ANY;
 
     
@@ -132,6 +133,8 @@ int main(int argc, char *argv[])
     if (!mr_s) 
         return 1;
     
+    printf("memories registered");
+    
     qp_attr.cap.max_send_wr = 1;
     qp_attr.cap.max_send_sge = 1;
     qp_attr.cap.max_recv_wr = 1;
@@ -146,9 +149,11 @@ int main(int argc, char *argv[])
     if (err) 
         return err;
 
+    printf("memories registered");
+
     /* Post receive before accepting connection */
     sge.addr = (uintptr_t) buf; 
-    sge.length = 1024 * sizeof (uint32_t); 
+    sge.length = (1024 * sizeof (uint32_t)); 
     sge.lkey = mr->lkey;
 
     recv_wr.sg_list = &sge; 
@@ -157,8 +162,10 @@ int main(int argc, char *argv[])
     if (ibv_post_recv(cm_id->qp, &recv_wr, &bad_recv_wr))
         return 1;
 
-    rep_pdata.buf_va = htonl((uintptr_t) buf); 
-    rep_pdata.buf_rkey = htonl(mr->rkey); 
+    printf("recv posted");
+
+    // rep_pdata.buf_va = htonl((uintptr_t) buf); 
+    // rep_pdata.buf_rkey = htonl(mr->rkey); 
 
     conn_param.responder_resources = 1;  
     conn_param.private_data = &rep_pdata; 
@@ -169,6 +176,7 @@ int main(int argc, char *argv[])
     err = rdma_accept(cm_id, &conn_param); 
     if (err) 
         return 1;
+    printf("connection accepted");
 
     err = rdma_get_cm_event(cm_channel, &event);
     if (err) 
@@ -193,13 +201,13 @@ int main(int argc, char *argv[])
     if (wc.status != IBV_WC_SUCCESS) //spark error
         return 1;
 
-    /* Add two integers and send reply back */
+    printf("completion q polled");
 
     //buf[0] = htonl(ntohl(buf[0]) + ntohl(buf[1]));
     printf("%d = ", buf[1023]);
 
     sge.addr = (uintptr_t) buf_s; 
-    sge.length = 1024 * sizeof (uint32_t); 
+    sge.length = (1024 * sizeof (uint32_t)); 
     sge.lkey = mr_s->lkey;
     
     send_wr.opcode = IBV_WR_SEND;
@@ -209,6 +217,8 @@ int main(int argc, char *argv[])
 
     if (ibv_post_send(cm_id->qp, &send_wr, &bad_send_wr)) 
         return 1;
+
+    printf("send posted");
 
     /* Wait for send completion */
     

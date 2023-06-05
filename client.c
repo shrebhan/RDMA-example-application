@@ -41,7 +41,8 @@ int main(int argc, char   *argv[ ])
    	struct ibv_comp_channel			*comp_chan; 
    	struct ibv_cq					*cq; 
    	struct ibv_cq					*evt_cq; 
-   	struct ibv_mr					*mr; 
+   	struct ibv_mr					*mr;
+	struct ibv_mr					*mr_r;
    	struct ibv_qp_init_attr			qp_attr = { }; 
    	struct ibv_sge					sge; 
    	struct ibv_send_wr				send_wr = { }; 
@@ -69,7 +70,7 @@ int main(int argc, char   *argv[ ])
 	if (err)  
 		return err;
 
-	n = getaddrinfo(argv[1], "20079", &hints, &res);
+	n = getaddrinfo(argv[1], "9888", &hints, &res);
 	if (n < 0)  
 		return 1;
 
@@ -140,8 +141,9 @@ int main(int argc, char   *argv[ ])
         IBV_ACCESS_REMOTE_WRITE); 
 	if (!mr_r) 
 		return 1;
+	printf("memories registered");
 
-	qp_attr.cap.max_send_wr = 2; 
+	qp_attr.cap.max_send_wr = 1; 
 	qp_attr.cap.max_send_sge = 1;
 	qp_attr.cap.max_recv_wr = 1; 
 	qp_attr.cap.max_recv_sge = 1; 
@@ -162,6 +164,7 @@ int main(int argc, char   *argv[ ])
 	err = rdma_connect(cm_id, &conn_param);
 	if (err)
 					return err;
+	printf("connected");
 
 	err = rdma_get_cm_event(cm_channel,&event);
 	if (err)
@@ -185,6 +188,7 @@ int main(int argc, char   *argv[ ])
 
 	if (ibv_post_recv(cm_id->qp, &recv_wr, &bad_recv_wr))
 					return 1;
+	printf("recv posted");
 
 	/* 寫入/傳送要新增的兩個整數 */
 
@@ -202,11 +206,12 @@ int main(int argc, char   *argv[ ])
 	send_wr.opcode                = IBV_WR_RDMA_WRITE;
 	send_wr.sg_list               = &sge;
 	send_wr.num_sge               = 1;
-	send_wr.wr.rdma.rkey          = ntohl(server_pdata.buf_rkey);
-	send_wr.wr.rdma.remote_addr   = ntohl(server_pdata.buf_va);
+	//send_wr.wr.rdma.rkey          = ntohl(server_pdata.buf_rkey);
+	//send_wr.wr.rdma.remote_addr   = ntohl(server_pdata.buf_va);
 
 	if (ibv_post_send(cm_id->qp, &send_wr, &bad_send_wr))
 		return 1;
+	printf("send posted");
 
 // 	sge.addr                      = (uintptr_t) buf + sizeof (uint32_t);
 // 	sge.length                    = sizeof (uint32_t);
