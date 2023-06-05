@@ -31,24 +31,35 @@ int main(int argc, char *argv[])
     struct pdata    rep_pdata;
 
     struct rdma_event_channel   *cm_channel;
-    struct rdma_cm_id           *listen_id; 
-    struct rdma_cm_id           *cm_id; 
+
+    struct rdma_cm_id           *listen_id;
+    struct rdma_cm_id           *cm_id;
+
     struct rdma_cm_event        *event; 
     struct rdma_conn_param      conn_param = { };
 
     struct ibv_pd           *pd; 
-    struct ibv_comp_channel *comp_chan; 
+
+    struct ibv_comp_channel *comp_chan;
+
     struct ibv_cq           *cq;  
     struct ibv_cq           *evt_cq;
+
     struct ibv_mr           *mr;
     struct ibv_mr           *mr_s; 
+
     struct ibv_qp_init_attr qp_attr = { };
+
     struct ibv_sge          sge; 
+
     struct ibv_send_wr      send_wr = { };
     struct ibv_send_wr      *bad_send_wr; 
+
     struct ibv_recv_wr      recv_wr = { };
     struct ibv_recv_wr      *bad_recv_wr;
+
     struct ibv_wc           wc;
+
     void                    *cq_context;
 
     struct sockaddr_in      sin;
@@ -156,6 +167,7 @@ int main(int argc, char *argv[])
     sge.length = (1024 * sizeof (uint32_t)); 
     sge.lkey = mr->lkey;
 
+    recv_wr.wr_id =     10; 
     recv_wr.sg_list = &sge; 
     recv_wr.num_sge = 1;
 
@@ -167,9 +179,9 @@ int main(int argc, char *argv[])
     // rep_pdata.buf_va = htonl((uintptr_t) buf); 
     // rep_pdata.buf_rkey = htonl(mr->rkey); 
 
-    conn_param.responder_resources = 1;  
-    conn_param.private_data = &rep_pdata; 
-    conn_param.private_data_len = sizeof rep_pdata;
+    // conn_param.responder_resources = 1;  
+    // conn_param.private_data = &rep_pdata; 
+    // conn_param.private_data_len = sizeof rep_pdata;
 
     /* Accept connection */
 
@@ -210,6 +222,7 @@ int main(int argc, char *argv[])
     sge.length = (1024 * sizeof (uint32_t)); 
     sge.lkey = mr_s->lkey;
     
+    send_wr.wr_id                 = 11;
     send_wr.opcode = IBV_WR_SEND;
     send_wr.send_flags = IBV_SEND_SIGNALED;
     send_wr.sg_list = &sge;
